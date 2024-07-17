@@ -282,7 +282,9 @@ def sync_to_fsi(fsi_session, fsi_patrons, edumate_contacts):
                     patrons_to_update.append(contact)
                     break
                 if 'student_number' in contact:
-                    if not contact['form_short_name'].rstrip('IB') == patron['classgrade'].rstrip('|'):
+                    clean_classgrade = patron['classgrade'].rstrip('|')
+                    clean_classgrade = clean_classgrade.rstrip(' ')
+                    if not contact['form_short_name'].rstrip('IB') == clean_classgrade:
                         patrons_to_update.append(contact)
                 break
         if not patron_found:
