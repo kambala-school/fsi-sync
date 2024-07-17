@@ -6,7 +6,7 @@ It requires API credentials for [Edumate](https://integrations.edumate.net/apido
 FSI_URL = 'https://school.functionalsolutions.com.au/Services/SSLIB_SER_PATRON_API.asmx/patron'
 FSI_API_KEY = 'api-key'
 FSI_API_SECRET = 'api-secret'
-EDUMATE_URL = 'https://edumate.schoo.au/school/web/app.php/api'
+EDUMATE_URL = 'https://edumate.school.au/school/web/app.php/api'
 EDUMATE_AUTH_URL = 'https://edumate.school.au/school/web/app.php/api/authorize'
 EDUMATE_CLIENT_ID = 'client-id'
 EDUMATE_CLIENT_SECRET = 'client-secret'
