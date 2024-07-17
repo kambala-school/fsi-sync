@@ -1,8 +1,8 @@
-name: Run on docker02 runner
+name: Run fsi-sync on docker02
 
 on:
   schedule:
-    - cron: '10 6 * * *' # 4PM AEST
+    - cron: '5 7 * * *' # 4PM AEST
 
 env:
   # Use docker.io for Docker Hub if empty
@@ -41,9 +41,7 @@ jobs:
 
       - name: Run Docker container
         run: |
-          docker run -d --name ${{ env.CONTAINER_NAME }} \
-            --expose 3000 --network=staffsync \
-            --restart unless-stopped \
+          docker run --rm -d --name ${{ env.CONTAINER_NAME }} \
             --env-file ${{ secrets.ENV_STAGING_FILE_PATH }} \
             --log-driver syslog --log-opt syslog-address=udp://syslog.kambala.nsw.edu.au:5141 \
             --log-opt tag=${{ env.CONTAINER_NAME }} \
