@@ -48,3 +48,13 @@ jobs:
             --log-driver syslog --log-opt syslog-address=udp://syslog.kambala.nsw.edu.au:5141 \
             --log-opt tag=${{ env.CONTAINER_NAME }} \
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+
+      - name: Post to a Slack channel
+        id: slack
+        uses: slackapi/slack-github-action@v1.26.0
+        with:
+          channel-id: 'C06P76V4X5F'
+          # For posting a simple plain text message
+          slack-message: "${{ github.workflow }} ${{ job.status }} - ${{ env.IMAGE_NAME }}\n"
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
