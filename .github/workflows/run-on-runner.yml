@@ -1,0 +1,50 @@
+name: Run on docker02 runner
+
+on:
+  schedule:
+    - cron: '50 15 * * *'
+
+env:
+  # Use docker.io for Docker Hub if empty
+  REGISTRY: ghcr.io
+  # github.repository as <account>/<repo>
+  IMAGE_NAME: ${{ github.repository }}
+  CONTAINER_NAME: fsi-sync
+
+jobs:
+  run-fsi-sync:
+    # specific self-hosted runner docker02
+    runs-on: docker02
+
+    steps:
+    
+      - name: Log into registry ${{ env.REGISTRY }}
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@0d4c9c5ea7693da7b068278f7b52bda2a190a446 # v3.2.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check if container is running
+        run: |
+          if [ "$(docker ps -aq -f name=^/${{ env.CONTAINER_NAME }}$)" ]; then
+            echo "Stopping and removing the existing container..."
+            docker stop ${{ env.CONTAINER_NAME }}
+            docker rm ${{ env.CONTAINER_NAME }}
+          else
+            echo "No existing container found."
+          fi
+
+      - name: Pull Docker image
+        run: docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+
+      - name: Run Docker container
+        run: |
+          docker run -d --name ${{ env.CONTAINER_NAME }} \
+            --expose 3000 --network=staffsync \
+            --restart unless-stopped \
+            --env-file ${{ secrets.ENV_STAGING_FILE_PATH }} \
+            --log-driver syslog --log-opt syslog-address=udp://syslog.kambala.nsw.edu.au:5141 \
+            --log-opt tag=${{ env.CONTAINER_NAME }} \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
