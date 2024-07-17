@@ -2,7 +2,7 @@ name: Run on docker02 runner
 
 on:
   schedule:
-    - cron: '50 15 * * *'
+    - cron: '0 6 * * *' # 4PM AEST
 
 env:
   # Use docker.io for Docker Hub if empty
