@@ -5,6 +5,9 @@ on:
   # schedule:
   #   - cron: '23 20 * * *' # 6AM AEDST
 
+  # Enable manual trigger
+  workflow_dispatch:  
+
 env:
   # Use docker.io for Docker Hub if empty
   REGISTRY: ghcr.io
