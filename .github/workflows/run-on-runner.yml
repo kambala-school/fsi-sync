@@ -1,8 +1,9 @@
 name: Run fsi-sync on docker02
 
 on:
-  schedule:
-    - cron: '23 20 * * *' # 6AM AEDST
+  # Moved to AWS ECS Scheduled Task
+  # schedule:
+  #   - cron: '23 20 * * *' # 6AM AEDST
 
 env:
   # Use docker.io for Docker Hub if empty
