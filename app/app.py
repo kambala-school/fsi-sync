@@ -55,17 +55,17 @@ def get_edumate_contacts(edumate_session):
         'Authorization': f'Bearer {edumate_access_token}'
     }
     all_contacts = []
-    contact_types = ['teacher', 'staff', 'students']
+    contact_types = ['staff', 'student']
 
     try:
         for contact_type in contact_types:
             url = str('')
-            if contact_type == 'teacher':
-                url = edumate_url + '/lms/' + 'teachers?contactType=teacher&status=current'
-            elif contact_type == 'staff':
-                url = edumate_url + '/lms/' + 'teachers?contactType=staff&status=current'
-            elif contact_type == 'students':
-                url = edumate_url + '/lms/' + contact_type
+            if contact_type == 'staff':
+                # Use the contacts endpoint for staff to include casuals
+                url = edumate_url + '/contacts/contacts/current?contactType=staff'
+            elif contact_type == 'student':
+                # Use the lms endpoint for students to include the classgrade field
+                url = edumate_url + '/lms/students'
             while url:
                 response = edumate_session.get(url, headers=headers).json()
                 if not response['success']:
@@ -81,7 +81,6 @@ def get_edumate_contacts(edumate_session):
                     print('.', end="")
                 else:
                     url = False
-
         return all_contacts
 
     except Exception as err:
@@ -245,6 +244,22 @@ def get_fsi_patrons(fsi_session):
                     raise Exception(response['msg'])
             except Exception as err:
                 print(f"Failed to search FSI: {err}")
+                sys.exit(1)
+            # Improve error handling to prevent infinite errors. Exit on 'Invalidate session token'.
+            # 2025-04-07T03:31:25.966+08:00
+            # Getting Edumate contacts................
+            # 2025-04-07T03:31:25.966+08:00
+            # Edumate contacts found: 1572
+            # 2025-04-07T03:31:25.996+08:00
+            # Getting FSI patrons.Failed to search FSI: Invalidate session token.
+            # 2025-04-07T03:31:26.020+08:00
+            # Failed to search FSI: Invalidate session token.
+            # 2025-04-07T03:31:26.045+08:00
+            # Failed to search FSI: Invalidate session token.
+            # 2025-04-07T03:31:26.069+08:00
+            # Failed to search FSI: Invalidate session token.
+            # 2025-04-07T03:31:26.094+08:00
+            # Failed to search FSI: Invalidate session token.
 
     return all_patrons
 
@@ -257,38 +272,56 @@ def sync_to_fsi(fsi_session, fsi_patrons, edumate_contacts):
 
     # Check for contacts that don't exist as patrons
     for contact in edumate_contacts:
+
+        # Check whether the contact has come from 'contacts' or 'lms' endpoint and normalise
+        contact_details = {}
+        if 'student_number' in contact:
+            contact_details = {
+                "student_number": contact['student_number'],
+                "email_address": contact['email_address'],
+                "firstname": contact['first_name'],
+                "surname": contact['surname'],
+                "form_short_name": contact['form_short_name']
+            }
+        else:
+            staff_number = ''
+            for ref in contact['general_info']['contact_reference']:
+                if ref.get('contact_type') == 'staff':
+                    staff_number = ref['staff_number']
+            contact_details = {
+                "staff_number": staff_number,
+                "email_address": contact['general_info']['email_address'],
+                "firstname": contact['general_info']['firstname'],
+                "surname": contact['general_info']['surname']
+            }
+
         patron_found = False
-        for patron in fsi_patrons:
-            email = ''
-            if 'student_number' in contact:
-                email = contact['email_address']
-            else:
-                email = contact['school_email_address']
+        for patron in fsi_patrons:            
             # Ignore Edumate contacts with no email address
-            if email is None:
+            if contact_details['email_address'] is None:
                 patron_found = True
                 break
             # Ignore Edumate contacts with no Kambala domain
-            if not 'kambala.nsw.edu.au' in email:
+            if not 'kambala.nsw.edu.au' in contact_details['email_address']:
                 patron_found = True
                 break
-            if email.lower() == patron['username'].lower():
+            if contact_details['email_address'].lower() == patron['username'].lower():
                 patron_found = True
                 # Check for any updates required to the patron (firstname, surname, classgrade)
-                if not contact['first_name'] == patron['firstname']:
-                    patrons_to_update.append(contact)
+                if not contact_details['firstname'] == patron['firstname']:
+                    patrons_to_update.append(contact_details)
                     break
-                if not contact['surname'] == patron['surname']:
-                    patrons_to_update.append(contact)
+                if not contact_details['surname'] == patron['surname']:
+                    patrons_to_update.append(contact_details)
                     break
-                if 'student_number' in contact:
+                if 'student_number' in contact_details:
                     clean_classgrade = patron['classgrade'].rstrip('|')
                     clean_classgrade = clean_classgrade.rstrip(' ')
-                    if not contact['form_short_name'].rstrip('IB') == clean_classgrade:
-                        patrons_to_update.append(contact)
+                    if not contact_details['form_short_name'].rstrip('IB') == clean_classgrade:
+                        patrons_to_update.append(contact_details)
                 break
         if not patron_found:
-            patrons_to_create.append(contact)
+            patrons_to_create.append(contact_details)
     print(f'Number of patrons to create: {len(patrons_to_create)}')
     print(f'Number of patrons to update: {len(patrons_to_update)}')
 
@@ -304,7 +337,7 @@ def sync_to_fsi(fsi_session, fsi_patrons, edumate_contacts):
             classgrade = contact['form_short_name'].rstrip('IB') # Remove 'IB' from year level
             external_id = contact['student_number']
         else:
-            email = contact['school_email_address']
+            email = contact['email_address']
             role = 'Teacher'
             classgrade = 'Staff'
             external_id = contact['staff_number']
@@ -312,7 +345,7 @@ def sync_to_fsi(fsi_session, fsi_patrons, edumate_contacts):
             "barcode": email,
             "username": email,
             "externalid": external_id,
-            "firstname": contact['first_name'],
+            "firstname": contact['firstname'],
             "surname":contact['surname'],
             "email": email,
             "classgrade": classgrade,
