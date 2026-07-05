@@ -172,7 +172,6 @@ def search_fsi_patrons(fsi_session, search_word, search_field):
     Search for FSI patrons. 
     Pagination not yet implemented. Function not in use.
     """
-    all_patrons = []
     page_number = 1
     page_count = 200
     data = {
@@ -302,7 +301,7 @@ def sync_to_fsi(fsi_session, fsi_patrons, edumate_contacts):
                 patron_found = True
                 break
             # Ignore Edumate contacts with no Kambala domain
-            if not 'kambala.nsw.edu.au' in contact_details['email_address']:
+            if 'kambala.nsw.edu.au' not in contact_details['email_address']:
                 patron_found = True
                 break
             if contact_details['email_address'].lower() == patron['username'].lower():
